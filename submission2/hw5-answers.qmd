@@ -1,0 +1,148 @@
+---
+title: "Homework 5"
+subtitle: "Research in Health Economics, Spring 2025"
+author: "Sammy Ramacher"
+format:
+    pdf: 
+        output-file: "RamacherS_hwk5-2"
+        output-ext: "pdf"
+        header-includes: 
+            - \usepackage{float}
+            - \floatplacement{table}{H}
+knitr:
+    opts_chunk:
+        warning: false
+
+---
+The GitHub repository for this work is available [here](https://https://github.com/sramac9/Homework5).
+```{r}
+#| include: false
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, readr, readxl, hrbrthemes, fixest,
+               scales, gganimate, gapminder, gifski, png, tufte, plotly, OECD,
+               ggrepel, survey, foreign, devtools, pdftools, kableExtra, modelsummary,
+               kableExtra, broom, gt, lfe)
+               
+```
+
+```{r}
+#| include: false
+#| eval: true
+
+mcaid.data <- read_tsv("/Users/sammyram/Documents/git/Homework5/data/acs_medicaid.txt")
+ins.data <- read_tsv("/Users/sammyram/Documents/git/Homework5/data/acs_insurance.txt")
+load("/Users/sammyram/Documents/git/Homework5/submission2/hwk5_workspace.Rdata")
+```
+
+
+\newpage
+# Summarize the Data
+
+\noindent Question 1. Plot the share of the adult population with direct purchase health insurance over time.
+
+```{r}
+#| echo=FALSE, fig.show='hold'
+
+q1
+```
+\newpage
+
+\noindent Question 2. Discuss the reduction in direct purchase health insurance in later years. Can you list a couple of policies that might have affected the success of the direct purchase insurance market?
+
+Private health insurance purchased through the online health insurance exchange was more difficult to access around 2016 because of higher premiums for insurance. Additionally, the result of the ACA and the new state implementation of Medicaid expansion shifted many people from private to public health insurance, thus reducing the number of people engaging in the direct purchase insurance market. While many states implemented the program in 2014, others implemented it later, and the shift from private to public insurance may have taken a few years to truly take effect. Therefore, the dip in individuals with direct purchase insurance starting in 2017 is a delayed effect of Medicaid expansion through the ACA.
+
+\newpage
+
+\noindent Question 3. Plot the share of the adult population with Medicaid over time.
+
+```{r}
+#| echo=FALSE, fig.show='hold'
+
+q3
+```
+\newpage
+
+\noindent Question 4. Plot the share of uninsured over time, separately by states that expanded Medicaid in 2014 versus those that did not. Drop all states that expanded after 2014.
+
+```{r}
+#| echo=FALSE, fig.show='hold'
+
+q4
+```
+\newpage
+
+\noindent Question 5. Calculate the average percent of uninsured individuals in 2012 and 2015, separately for expansion and non-expansion states. Present your results in a basic 2x2 DD table.
+
+```{r}
+#| echo=FALSE, fig.show='hold'
+kable(
+  q5 %>%
+    mutate(
+      `2012` = scales::percent(`2012`, accuracy = 0.1),
+      `2015` = scales::percent(`2015`, accuracy = 0.1),
+      diff = scales::percent(diff, accuracy = 0.1)
+    ),
+  format = "latex",
+  caption = "Average Uninsured Rates by Expansion Status",
+  col.names = c("Group", "2012", "2015", "Difference"),
+  booktabs = TRUE,
+  align = c("l", "c", "c", "c"))
+```
+\newpage
+
+\noindent Question 6. Estimate the effect of Medicaid expansion on the uninsurance rate using a standard DD regression estimator, again focusing only on states that expanded in 2014 versus those that never expanded.
+
+```{r}
+#| echo=FALSE, fig.show='hold'
+
+q6
+```
+\newpage
+
+\noindent Question 7. Include state and year fixed effects in your estimates. Try using the lfe or fixest package to estimate this instead of directly including the fixed effects.
+
+```{r}
+#| echo=FALSE, fig.show='hold'
+
+q7
+```
+\newpage
+
+\noindent Question 8. Repeat the analysis in question 7 but include all states (even those that expanded after 2014). Are your results different? If so, why?
+
+```{r}
+#| echo: false
+#| tbl-cap: "DD Estimates for Medicaid Expansion with Staggered Treatment"
+
+models <- list("Standard DD" = dd.est, 
+               "TWFE" = fe.est,
+               "Time-varying Treatment" = fe.est2)
+modelsummary(models,
+             coef_rename=c("postTRUE" = "Post 2014","expand_everTRUE"="Expand",
+                           "treat" = "Post x Expand"),
+             gof_omit='DF|F|Lik|AIC|BIC|Adj')
+```
+\newpage
+
+\noindent Question 9. Provide an “event study” graph showing the effects of Medicaid expansion in each year. Use the specification that includes state and year fixed effects, limited to states that expanded in 2014 or never expanded.
+
+```{r}
+#| echo: false
+#| fig-cap: "Event Study with Common Treatment Time"
+
+iplot(mod.twfe, 
+      xlab = 'Time to treatment',
+      main = '')
+```
+\newpage
+
+\noindent Question 10. Repeat part 9 but again include states that expanded after 2014. Note: this is tricky…you need to put all states onto “event time” to create this graph.
+
+```{r}
+#| echo: false
+#| fig-cap: "Event Study with Staggered Treatment"
+
+iplot(mod.twfe2, 
+      xlab = 'Time to treatment',
+      main = '')
+```
