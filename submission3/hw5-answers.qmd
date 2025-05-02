@@ -49,7 +49,7 @@ q1
 
 \noindent Question 2. Discuss the reduction in direct purchase health insurance in later years. Can you list a couple of policies that might have affected the success of the direct purchase insurance market?
 
-Private health insurance purchased through the online health insurance exchange was more difficult to access around 2016 because of higher premiums for insurance. Additionally, the result of the ACA and the new state implementation of Medicaid expansion shifted many people from private to public health insurance, thus reducing the number of people engaging in the direct purchase insurance market. While many states implemented the program in 2014, others implemented it later, and the shift from private to public insurance may have taken a few years to truly take effect. Therefore, the dip in individuals with direct purchase insurance starting in 2017 is a delayed effect of Medicaid expansion through the ACA.
+Private health insurance purchased through the online health insurance exchange was more difficult to access around 2016 due to the Trump Administration changing some of the regulations for the ACA. These changes included reducing the federal government's role in the ACA, specifically leaving it to the states, and scaling back programs that helped expand ACA implementation. Additionally, the result of the ACA and the new state implementation of Medicaid expansion shifted many people from private to public health insurance, thus reducing the number of people engaging in the direct purchase insurance market. While many states implemented the program in 2014, others implemented it later, and the shift from private to public insurance may have taken a few years to truly take effect. Therefore, the dip in individuals with direct purchase insurance starting in 2017 is a delayed effect of Medicaid expansion through the ACA, alongside the Trump administration's interference with the ACA.
 
 \newpage
 
@@ -74,27 +74,27 @@ q4
 \noindent Question 5. Calculate the average percent of uninsured individuals in 2012 and 2015, separately for expansion and non-expansion states. Present your results in a basic 2x2 DD table.
 
 ```{r}
-#| echo=FALSE, fig.show='hold'
-kable(
-  q5 %>%
-    mutate(
-      `2012` = scales::percent(`2012`, accuracy = 0.1),
-      `2015` = scales::percent(`2015`, accuracy = 0.1),
-      diff = scales::percent(diff, accuracy = 0.1)
-    ),
-  format = "latex",
-  caption = "Average Uninsured Rates by Expansion Status",
-  col.names = c("Group", "2012", "2015", "Difference"),
-  booktabs = TRUE,
-  align = c("l", "c", "c", "c"))
+#| echo: false
+#| label: tbl-ddtable
+#| tbl-cap: "DD Table for Medicaid Expansion"
+
+knitr::kable(dd.table, 
+             col.names=c("Group", "Pre", "Post"),
+             digits=2,
+             booktabs = TRUE,
+             escape=F,
+             align="l",
+             format='latex') %>% 
+  kable_styling(full_width=F)
 ```
 \newpage
 
 \noindent Question 6. Estimate the effect of Medicaid expansion on the uninsurance rate using a standard DD regression estimator, again focusing only on states that expanded in 2014 versus those that never expanded.
 
 ```{r}
-#| echo=FALSE, fig.show='hold'
-
+#| echo: false
+#| label: tbl-ddregs
+#| tbl-cap: "DD Estimates for Medicaid Expansion"
 q6
 ```
 \newpage
@@ -102,9 +102,16 @@ q6
 \noindent Question 7. Include state and year fixed effects in your estimates. Try using the lfe or fixest package to estimate this instead of directly including the fixed effects.
 
 ```{r}
-#| echo=FALSE, fig.show='hold'
+#| echo: false
+#| label: tbl-ddregs2
+#| tbl-cap: "DD Estimates for Medicaid Expansion with TWFE"
 
-q7
+models <- list("Standard DD" = dd.est, 
+               "TWFE" = fe.est)
+modelsummary(models,
+             coef_rename=c("postTRUE" = "Post 2014","expand_everTRUE"="Expand",
+                           "treat" = "Post x Expand"),
+             gof_omit='DF|F|Lik|AIC|BIC|Adj')
 ```
 \newpage
 
@@ -122,6 +129,10 @@ modelsummary(models,
                            "treat" = "Post x Expand"),
              gof_omit='DF|F|Lik|AIC|BIC|Adj')
 ```
+
+
+The results are different here for the time-varying treatment against the 2014 treatment. This is because the year fixed effect  differs for each state due to different years of treatment, and the data is not adjusted into event time. Therefore, those states with later years of designation have interaction terms that are 0 for all years before treatment, which is reflected in the estimator for the interaction term.
+
 \newpage
 
 \noindent Question 9. Provide an “event study” graph showing the effects of Medicaid expansion in each year. Use the specification that includes state and year fixed effects, limited to states that expanded in 2014 or never expanded.
@@ -131,7 +142,7 @@ modelsummary(models,
 #| fig-cap: "Event Study with Common Treatment Time"
 
 iplot(mod.twfe, 
-      xlab = 'Time to treatment',
+      xlab = 'Year',
       main = '')
 ```
 \newpage
@@ -143,6 +154,6 @@ iplot(mod.twfe,
 #| fig-cap: "Event Study with Staggered Treatment"
 
 iplot(mod.twfe2, 
-      xlab = 'Time to treatment',
+      xlab = 'Relative Event Time',
       main = '')
 ```

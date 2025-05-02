@@ -90,20 +90,24 @@ uninsured.share <- final.data.exp %>%
     total_adult_pop = sum(adult_pop, na.rm = TRUE),
     share_uninsured = total_uninsured / total_adult_pop,
     .groups = "drop")
+#---------------
+dd.table <- mcaid.data %>% 
+  filter(is.na(expand_year) | expand_year==2014) %>%
+  filter(year %in% c(2012, 2015)) %>%  
+  group_by(expand_ever, year) %>%
+  mutate(perc_unins=uninsured/adult_pop) %>%
+  summarize(uninsured=mean(perc_unins))
 
-dd.table <- final.data.exp %>%
-  filter(year %in% c(2012, 2015)) %>%
-  group_by(expand_group, year) %>%
-  summarize(
-    avg_uninsured = sum(uninsured, na.rm = TRUE) / sum(adult_pop, na.rm = TRUE),
-    .groups = "drop"
+dd.table <- pivot_wider(dd.table, names_from="year", names_prefix="year", values_from="uninsured") %>% 
+  ungroup() %>%
+  mutate(expand_ever=case_when(
+    expand_ever==FALSE ~ 'Non-expansion',
+    expand_ever==TRUE ~ 'Expansion')
   ) %>%
-  pivot_wider(names_from = year, values_from = avg_uninsured)
+  rename(Group=expand_ever,
+         Pre=year2012,
+         Post=year2015)
 
-q5 <- dd.table %>%
-  mutate(
-    diff = `2015` - `2012`
-  )
 
 #Question 6: Estimate the effect of Medicaid expansion on the uninsurance rate using a standard DD regression estimator, again focusing only on states that expanded in 2014 versus those that never expanded.
 
@@ -115,23 +119,14 @@ reg.dat <- mcaid.data %>% filter(expand_year==2014 | is.na(expand_year), !is.na(
 dd.ins.reg <- lm(perc_unins ~ post + expand_ever + post*expand_ever, data=reg.dat)
 q6 <- modelsummary(list("DD (2014)"=dd.ins.reg),
              shape=term + statistic ~ model, 
+             coef_rename=c("postTRUE" = "Post 2014","expand_everTRUE"="Expand"
+                          ),
              gof_map=NA,
-             coef_omit='Intercept',
              vcov=~State,
              output = "markdown"
          )
 
 #Question 7: Include state and year fixed effects in your estimates. Try using the lfe or fixest package to estimate this instead of directly including the fixed effects.
-m.twfe <- feols(perc_unins ~ treat | State + year, data=reg.dat)
-q7 <- msummary(list("TWFE"=m.twfe),
-         shape=term + statistic ~ model, 
-         gof_map=NA,
-         coef_omit='Intercept',
-         vcov=~State,
-         output = "markdown"
-         )
-
-#Question 8: Repeat the analysis in question 7 but include all states (even those that expanded after 2014). Are your results different? If so, why?
 reg.data <- mcaid.data %>% mutate(perc_unins=uninsured/adult_pop,
                                   post=(year>=2014),
                                   treat=post*expand_ever) %>%
@@ -139,6 +134,10 @@ reg.data <- mcaid.data %>% mutate(perc_unins=uninsured/adult_pop,
 
 dd.est <- lm(perc_unins~post + expand_ever + treat, data=reg.data)
 fe.est <- feols(perc_unins~treat | State + year, data=reg.data)
+
+
+#Question 8: Repeat the analysis in question 7 but include all states (even those that expanded after 2014). Are your results different? If so, why?
+
 
 reg.data2 <- mcaid.data %>% 
   mutate(perc_unins=uninsured/adult_pop,
